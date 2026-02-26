@@ -43,7 +43,7 @@ def _error(exc: Exception) -> str:
 
 mcp = FastMCP(
     "mcp-data-server",
-    description=(
+    instructions=(
         "An MCP server that gives AI assistants the ability to connect to, "
         "query, profile, and monitor data sources — turning any LLM into an "
         "interactive data engineering copilot."

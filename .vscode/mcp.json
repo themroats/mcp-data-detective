@@ -1,0 +1,8 @@
+{
+  "servers": {
+    "data-server": {
+      "command": "C:\\Users\\Otis\\AppData\\Local\\Programs\\Python\\Python313\\Scripts\\mcp-data-server.exe",
+      "env": {}
+    }
+  }
+}
