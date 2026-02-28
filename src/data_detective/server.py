@@ -6,10 +6,11 @@ Registers all tools with the MCP framework and handles the server lifecycle.
 
 from __future__ import annotations
 
+import functools
 import json
 import logging
 import os
-from typing import Any
+from typing import Any, Callable
 
 from mcp.server.fastmcp import FastMCP
 
@@ -39,6 +40,18 @@ def _error(exc: Exception) -> str:
     """Return a clean JSON error payload instead of a raw traceback."""
     return json.dumps({"error": type(exc).__name__, "message": str(exc)}, indent=2)
 
+
+def _tool_handler(fn: Callable[..., Any]) -> Callable[..., str]:
+    """Decorator that wraps a tool function with JSON serialization and error handling."""
+    @functools.wraps(fn)
+    def wrapper(*args: Any, **kwargs: Any) -> str:
+        try:
+            return _json(fn(*args, **kwargs))
+        except Exception as exc:
+            logger.exception("%s failed", fn.__name__)
+            return _error(exc)
+    return wrapper
+
 # ---------------------------------------------------------------------------
 # Server & shared state
 # ---------------------------------------------------------------------------
@@ -60,6 +73,7 @@ registry = SourceRegistry()
 
 
 @mcp.tool()
+@_tool_handler
 def connect_source(name: str, source_type: str, path: str) -> str:
     """Connect a data source (SQLite DB, Parquet file, or CSV).
 
@@ -68,35 +82,25 @@ def connect_source(name: str, source_type: str, path: str) -> str:
         source_type: One of 'sqlite', 'parquet', 'csv'.
         path: File path. Supports globs for parquet/csv (e.g. './data/*.parquet').
     """
-    try:
-        return _json(connect_tools.connect_source(registry, name, source_type, path))
-    except Exception as exc:
-        logger.exception("connect_source failed")
-        return _error(exc)
+    return connect_tools.connect_source(registry, name, source_type, path)
 
 
 @mcp.tool()
+@_tool_handler
 def disconnect_source(name: str) -> str:
     """Disconnect a previously registered data source.
 
     Args:
         name: The alias of the source to disconnect.
     """
-    try:
-        return _json(connect_tools.disconnect_source(registry, name))
-    except Exception as exc:
-        logger.exception("disconnect_source failed")
-        return _error(exc)
+    return connect_tools.disconnect_source(registry, name)
 
 
 @mcp.tool()
+@_tool_handler
 def list_sources() -> str:
     """List all connected data sources and their tables."""
-    try:
-        return _json(connect_tools.list_sources(registry))
-    except Exception as exc:
-        logger.exception("list_sources failed")
-        return _error(exc)
+    return connect_tools.list_sources(registry)
 
 
 # ---------------------------------------------------------------------------
@@ -105,16 +109,14 @@ def list_sources() -> str:
 
 
 @mcp.tool()
+@_tool_handler
 def list_tables() -> str:
     """List all tables and views across all connected sources."""
-    try:
-        return _json(query_tools.list_tables(registry))
-    except Exception as exc:
-        logger.exception("list_tables failed")
-        return _error(exc)
+    return query_tools.list_tables(registry)
 
 
 @mcp.tool()
+@_tool_handler
 def get_table_schema(table: str, source: str | None = None) -> str:
     """Get column names, types, and nullability for a table.
 
@@ -122,14 +124,11 @@ def get_table_schema(table: str, source: str | None = None) -> str:
         table: The table name to describe.
         source: (Optional) Source alias, needed for SQLite tables.
     """
-    try:
-        return _json(query_tools.get_schema(registry, table, source))
-    except Exception as exc:
-        logger.exception("get_table_schema failed")
-        return _error(exc)
+    return query_tools.get_schema(registry, table, source)
 
 
 @mcp.tool()
+@_tool_handler
 def run_query(sql: str, limit: int = DEFAULT_QUERY_LIMIT) -> str:
     """Execute a SQL query against any connected data source.
 
@@ -139,14 +138,11 @@ def run_query(sql: str, limit: int = DEFAULT_QUERY_LIMIT) -> str:
         sql: The SQL query to execute.
         limit: Max rows to return (default 1000).
     """
-    try:
-        return _json(query_tools.query(registry, sql, limit=limit))
-    except Exception as exc:
-        logger.exception("run_query failed")
-        return _error(exc)
+    return query_tools.query(registry, sql, limit=limit)
 
 
 @mcp.tool()
+@_tool_handler
 def get_sample(table: str, n: int = 10, source: str | None = None) -> str:
     """Get a random sample of rows from a table.
 
@@ -155,11 +151,7 @@ def get_sample(table: str, n: int = 10, source: str | None = None) -> str:
         n: Number of rows (default 10).
         source: (Optional) Source alias for SQLite tables.
     """
-    try:
-        return _json(query_tools.get_sample(registry, table, n, source))
-    except Exception as exc:
-        logger.exception("get_sample failed")
-        return _error(exc)
+    return query_tools.get_sample(registry, table, n, source)
 
 
 # ---------------------------------------------------------------------------
@@ -168,6 +160,7 @@ def get_sample(table: str, n: int = 10, source: str | None = None) -> str:
 
 
 @mcp.tool()
+@_tool_handler
 def profile_table(table: str, source: str | None = None) -> str:
     """Generate a detailed profile of a table: row count, null rates, distributions, and per-column stats.
 
@@ -175,21 +168,14 @@ def profile_table(table: str, source: str | None = None) -> str:
         table: The table to profile.
         source: (Optional) Source alias for SQLite tables.
     """
-    try:
-        return _json(profile_tools.profile_table(registry, table, source))
-    except Exception as exc:
-        logger.exception("profile_table failed")
-        return _error(exc)
+    return profile_tools.profile_table(registry, table, source)
 
 
 @mcp.tool()
+@_tool_handler
 def summarize() -> str:
     """High-level summary of all connected data: source count, table count, total rows, and column names."""
-    try:
-        return _json(profile_tools.summarize(registry))
-    except Exception as exc:
-        logger.exception("summarize failed")
-        return _error(exc)
+    return profile_tools.summarize(registry)
 
 
 # ---------------------------------------------------------------------------
@@ -198,6 +184,7 @@ def summarize() -> str:
 
 
 @mcp.tool()
+@_tool_handler
 def detect_quality_issues(table: str, source: str | None = None) -> str:
     """Scan a table for data quality issues: duplicates, high null rates, constant columns, unexpected negatives.
 
@@ -205,14 +192,11 @@ def detect_quality_issues(table: str, source: str | None = None) -> str:
         table: The table to scan.
         source: (Optional) Source alias for SQLite tables.
     """
-    try:
-        return _json(quality_tools.detect_quality_issues(registry, table, source))
-    except Exception as exc:
-        logger.exception("detect_quality_issues failed")
-        return _error(exc)
+    return quality_tools.detect_quality_issues(registry, table, source)
 
 
 @mcp.tool()
+@_tool_handler
 def detect_anomalies(
     table: str,
     column: str,
@@ -231,18 +215,13 @@ def detect_anomalies(
         source: (Optional) Source alias for SQLite tables.
         z_threshold: Z-score threshold (default 3.0).
     """
-    try:
-        return _json(
-            quality_tools.detect_anomalies(
-                registry, table, column, time_column, source, z_threshold
-            )
-        )
-    except Exception as exc:
-        logger.exception("detect_anomalies failed")
-        return _error(exc)
+    return quality_tools.detect_anomalies(
+        registry, table, column, time_column, source, z_threshold
+    )
 
 
 @mcp.tool()
+@_tool_handler
 def compare_schemas(
     table_a: str,
     table_b: str,
@@ -257,13 +236,7 @@ def compare_schemas(
         source_a: (Optional) Source alias for first table.
         source_b: (Optional) Source alias for second table.
     """
-    try:
-        return _json(
-            quality_tools.compare_schemas(registry, table_a, table_b, source_a, source_b)
-        )
-    except Exception as exc:
-        logger.exception("compare_schemas failed")
-        return _error(exc)
+    return quality_tools.compare_schemas(registry, table_a, table_b, source_a, source_b)
 
 
 # ---------------------------------------------------------------------------
@@ -272,6 +245,7 @@ def compare_schemas(
 
 
 @mcp.tool()
+@_tool_handler
 def export_data(sql: str, output_path: str, format: str = "parquet") -> str:
     """Export SQL query results to a Parquet or CSV file.
 
@@ -280,11 +254,7 @@ def export_data(sql: str, output_path: str, format: str = "parquet") -> str:
         output_path: File path for the output file.
         format: 'parquet' or 'csv' (default 'parquet').
     """
-    try:
-        return _json(export_tools.export_data(registry, sql, output_path, format))
-    except Exception as exc:
-        logger.exception("export_data failed")
-        return _error(exc)
+    return export_tools.export_data(registry, sql, output_path, format)
 
 
 # ---------------------------------------------------------------------------
