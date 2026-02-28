@@ -279,6 +279,49 @@ A monthly SQL query reveals the deeper pattern — both March months show a **~6
   2025-04  │  $709,412   │  5.21
 ```
 
+## Real-World Data: NYC Uber/Lyft (20.9M Rides)
+
+Beyond synthetic demos, this server was tested against the [NYC TLC FHVHV dataset](https://www.nyc.gov/site/tlc/about/tlc-trip-record-data.page) — 20.9 million Uber and Lyft rides from January 2026 (482 MB Parquet file).
+
+### What the MCP Tools Found
+
+**Quality issues** (`detect_quality_issues`):
+- **29,965 negative fare amounts** — 90% concentrated on January 25 (a blizzard day)
+- **2,782 zero-distance trips** with valid fares
+- **120 trips over 200 miles** (potential GPS errors)
+
+**Market breakdown** (`run_query`):
+- Uber: 72.8% of rides, $26.13 avg fare
+- Lyft: 27.2% of rides, $24.36 avg fare (but higher tips: $1.27 vs $1.12)
+
+**Anomaly detection** (`detect_anomalies` + `run_query`):
+- January 25 trip volume dropped 63% (322K vs ~700K normal) — likely a winter storm
+- Revenue fell 67% on the same day ($6.7M vs ~$20M)
+- Both metrics recovered within 48 hours
+
+### Trend Visualization
+
+Generated from MCP query results using [charts.py](charts.py):
+
+![NYC Uber/Lyft Trends — January 2026](docs/nyc_trends.png)
+
+Four panels showing daily trip volume (with the Jan 25 blizzard dip), daily revenue, hourly demand patterns (dual rush-hour peaks), and the negative fare anomaly spike.
+
+### Reproducing This Analysis
+
+```bash
+# Download the FHVHV Parquet file from NYC TLC
+# https://www.nyc.gov/site/tlc/about/tlc-trip-record-data.page
+mkdir -p data/nyc-taxi
+# Place fhvhv_tripdata_2026-01.parquet in data/nyc-taxi/
+
+# Then ask your AI assistant:
+# "Connect to data/nyc-taxi/fhvhv_tripdata_2026-01.parquet as nyc-taxi"
+# "Profile the nyc-taxi table"
+# "Detect quality issues in nyc-taxi"
+# "Run a query to show daily trip counts and revenue"
+```
+
 ## Example Conversation
 
 Once connected, you can have conversations like:
@@ -350,6 +393,9 @@ mcp-data-server/
 │       └── generator.py       # Synthetic e-commerce data generator
 ├── tests/
 │   └── test_tools.py          # Registry, quality, profile, export tests
+├── charts.py                  # NYC taxi trend visualization script
+├── docs/
+│   └── nyc_trends.png         # Generated chart from real-world analysis
 ├── data/                      # Generated demo data (gitignored)
 ├── pyproject.toml
 └── README.md
