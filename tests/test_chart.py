@@ -400,6 +400,70 @@ class TestExportInsight:
         assert "matplotlib" in content
         assert result["format"] == "script"
 
+    def test_export_script_indentation(self, connected: SourceRegistry, tmp_path: Path):
+        """Verify that the generated script has no broken indentation."""
+        rp = self._create_recipe(connected, tmp_path)
+        out = tmp_path / "indent_check.py"
+        export_insight(recipe_path=rp, export_format="script", output_path=str(out))
+        content = out.read_text()
+        # No line should start with unexpected whitespace at the top level
+        for i, line in enumerate(content.splitlines(), 1):
+            stripped = line.lstrip()
+            # Skip blank lines
+            if not stripped:
+                continue
+            indent = len(line) - len(stripped)
+            # Top-level statements should be at indent 0
+            # Indented code (inside for/if) should be multiples of 4
+            assert indent % 4 == 0, f"Line {i} has {indent}-space indent: {line!r}"
+
+    def test_export_script_output_path_in_charts_dir(
+        self, connected: SourceRegistry, tmp_path: Path
+    ):
+        """Verify the generated script saves charts to charts/ not the root directory."""
+        rp = self._create_recipe(connected, tmp_path)
+        out = tmp_path / "path_check.py"
+        export_insight(recipe_path=rp, export_format="script", output_path=str(out))
+        content = out.read_text()
+        assert 'Path("charts")' in content
+        assert "mkdir" in content
+
+    def test_export_script_has_shebang(self, connected: SourceRegistry, tmp_path: Path):
+        rp = self._create_recipe(connected, tmp_path)
+        out = tmp_path / "shebang_check.py"
+        export_insight(recipe_path=rp, export_format="script", output_path=str(out))
+        content = out.read_text()
+        assert content.startswith("#!/usr/bin/env python3")
+
+    def test_export_script_is_valid_python(self, connected: SourceRegistry, tmp_path: Path):
+        """Verify the generated script compiles without syntax errors."""
+        rp = self._create_recipe(connected, tmp_path)
+        out = tmp_path / "syntax_check.py"
+        export_insight(recipe_path=rp, export_format="script", output_path=str(out))
+        content = out.read_text()
+        compile(content, str(out), "exec")  # raises SyntaxError if invalid
+
+    def test_export_script_with_color(self, connected: SourceRegistry, tmp_path: Path):
+        """Verify color-grouped script also has valid indentation and compiles."""
+        create_chart(
+            connected,
+            sql='SELECT month, revenue, region FROM "shop"."sales"',
+            chart_type="bar",
+            x="month",
+            y="revenue",
+            color="region",
+            title="Color Script",
+            output_path=str(tmp_path / "color.png"),
+        )
+        save_recipe(name="color_script", output_dir=str(tmp_path))
+        rp = str(tmp_path / "color_script.recipe.json")
+        out = tmp_path / "color_check.py"
+        export_insight(recipe_path=rp, export_format="script", output_path=str(out))
+        content = out.read_text()
+        compile(content, str(out), "exec")
+        assert "groups" in content
+        assert 'Path("charts")' in content
+
     def test_export_notebook(self, connected: SourceRegistry, tmp_path: Path):
         rp = self._create_recipe(connected, tmp_path)
         out = tmp_path / "export.ipynb"

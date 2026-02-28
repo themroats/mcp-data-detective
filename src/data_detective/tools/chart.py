@@ -419,25 +419,29 @@ def _generate_script(recipe: ChartRecipe) -> str:
     ]
 
     for src in recipe.sources:
+        # Normalize Windows backslashes to forward slashes for valid Python strings
+        src_path = src["path"].replace("\\", "/")
         if src["type"] == "sqlite":
             lines.append(
-                f'conn.execute("ATTACH \'{src["path"]}\' AS \\"{src["name"]}\\" (TYPE sqlite)")'
+                f'conn.execute("ATTACH \'{src_path}\' AS \\"{src["name"]}\\" (TYPE sqlite)")'
             )
         elif src["type"] == "parquet":
             lines.append(
                 f'conn.execute("CREATE OR REPLACE VIEW \\"{src["name"]}\\"'
-                f" AS SELECT * FROM read_parquet('{src['path']}')\")"
+                f" AS SELECT * FROM read_parquet('{src_path}')\")"
             )
         elif src["type"] == "csv":
             lines.append(
                 f'conn.execute("CREATE OR REPLACE VIEW \\"{src["name"]}\\"'
-                f" AS SELECT * FROM read_csv_auto('{src['path']}')\")"
+                f" AS SELECT * FROM read_csv_auto('{src_path}')\")"
             )
 
     lines += [
         "",
         "# Run query",
-        f'sql = """{recipe.sql}"""',
+        'sql = """',
+        recipe.sql,
+        '"""',
         "df = conn.execute(sql).fetchdf()",
         "conn.close()",
         "",
