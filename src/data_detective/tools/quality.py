@@ -8,6 +8,29 @@ from data_detective import NUMERIC_TYPE_FRAGMENTS
 from data_detective.sources.registry import SourceRegistry
 from data_detective.validation import validate_identifier
 
+# ---------------------------------------------------------------------------
+# Quality-check thresholds
+# ---------------------------------------------------------------------------
+
+# Null-rate boundaries
+NULL_RATE_WARNING = 0.05    # flag columns with >5% nulls
+NULL_RATE_HIGH = 0.30       # escalate to "high" severity above 30%
+
+# Duplicate significance threshold
+DUPLICATE_RATE_HIGH = 0.01  # >1% duplicate groups → "high" severity
+
+# Minimum data points for time-series anomaly detection
+MIN_TIME_SERIES_POINTS = 3
+
+# Row-level anomaly outlier result cap
+MAX_OUTLIER_ROWS = 100
+
+# Columns whose values should never be negative
+POSITIVE_KEYWORDS = [
+    "price", "amount", "total", "quantity", "qty",
+    "count", "cost", "revenue", "fee",
+]
+
 
 def detect_quality_issues(
     registry: SourceRegistry,
@@ -54,7 +77,7 @@ def detect_quality_issues(
         issues.append(
             {
                 "type": "duplicates",
-                "severity": "high" if dup_count > row_count * 0.01 else "medium",
+                "severity": "high" if dup_count > row_count * DUPLICATE_RATE_HIGH else "medium",
                 "message": f"Found {dup_count} groups of exact duplicate rows",
                 "duplicate_groups": dup_count,
             }
@@ -77,7 +100,7 @@ def detect_quality_issues(
             issues.append(
                 {
                     "type": "semantic_duplicates",
-                    "severity": "high" if sem_dup_count > row_count * 0.01 else "medium",
+                    "severity": "high" if sem_dup_count > row_count * DUPLICATE_RATE_HIGH else "medium",
                     "message": (
                         f"Found {sem_dup_count} groups of rows with identical "
                         f"values (excluding ID columns)"
@@ -97,11 +120,11 @@ def detect_quality_issues(
             f"SELECT COUNT(*) FROM {qualified} WHERE {safe_col} IS NULL"
         ).fetchone()[0]
         null_rate = null_count / row_count
-        if null_rate > 0.05:
+        if null_rate > NULL_RATE_WARNING:
             issues.append(
                 {
                     "type": "high_null_rate",
-                    "severity": "high" if null_rate > 0.3 else "medium",
+                    "severity": "high" if null_rate > NULL_RATE_HIGH else "medium",
                     "column": col,
                     "message": f"Column '{col}' has {null_rate:.1%} null values ({null_count:,} rows)",
                     "null_rate": round(null_rate, 4),
@@ -125,8 +148,7 @@ def detect_quality_issues(
 
         # --- Negative values in likely-positive columns ---
         is_numeric = any(t in col_type for t in NUMERIC_TYPE_FRAGMENTS)
-        positive_keywords = ["price", "amount", "total", "quantity", "qty", "count", "cost", "revenue", "fee"]
-        likely_positive = any(kw in col.lower() for kw in positive_keywords)
+        likely_positive = any(kw in col.lower() for kw in POSITIVE_KEYWORDS)
 
         if is_numeric and likely_positive:
             neg_count = registry.execute_raw(
@@ -194,7 +216,7 @@ def detect_anomalies(
         )
         rows = registry.query(agg_query, limit=10000)
 
-        if len(rows) < 3:
+        if len(rows) < MIN_TIME_SERIES_POINTS:
             return {"table": table, "column": column, "anomalies": [], "message": "Not enough data points for anomaly detection"}
 
         values = [r["daily_value"] for r in rows]
@@ -242,7 +264,7 @@ def detect_anomalies(
                 f"WHERE {safe_col} IS NOT NULL "
                 f"AND ABS(({safe_col} - {mean}) / {stddev}) >= {z_threshold} "
                 f"ORDER BY ABS(({safe_col} - {mean}) / {stddev}) DESC",
-                limit=100,
+                limit=MAX_OUTLIER_ROWS,
             )
             anomalies = outliers
 
