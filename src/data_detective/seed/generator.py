@@ -9,10 +9,10 @@ Generates realistic-looking data with intentional quality issues for demo purpos
 - Future-dated timestamps
 
 Usage:
-    mcp-data-seed                         # Default: outputs to ./data/
-    mcp-data-seed --output ./my-data      # Custom output directory
-    mcp-data-seed --rows 50000            # Control row count
-    mcp-data-seed --format sqlite         # Output as SQLite DB instead of Parquet
+    data-detective-seed                         # Default: outputs to ./data/
+    data-detective-seed --output ./my-data      # Custom output directory
+    data-detective-seed --rows 50000            # Control row count
+    data-detective-seed --format sqlite         # Output as SQLite DB instead of Parquet
 """
 
 from __future__ import annotations
