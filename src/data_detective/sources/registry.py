@@ -15,6 +15,8 @@ from typing import Any
 
 import duckdb
 
+from data_detective.validation import validate_identifier, validate_path
+
 
 class SourceType(str, Enum):
     SQLITE = "sqlite"
@@ -60,11 +62,14 @@ class SourceRegistry:
             ValueError: If the name is already registered or the type is unknown.
             FileNotFoundError: If the path does not exist.
         """
+        name = validate_identifier(name, "source name")
+
         if name in self._sources:
             raise ValueError(f"Source '{name}' is already registered. Disconnect it first.")
 
         stype = SourceType(source_type.lower())
         resolved = str(Path(path).resolve())
+        validate_path(resolved, "source path")
 
         # Validate path exists (for globs, check the parent dir)
         if "*" not in resolved and not os.path.exists(resolved):
@@ -100,6 +105,7 @@ class SourceRegistry:
 
     def disconnect(self, name: str) -> None:
         """Remove a registered data source."""
+        name = validate_identifier(name, "source name")
         if name not in self._sources:
             raise ValueError(f"Source '{name}' is not registered.")
 
@@ -150,6 +156,9 @@ class SourceRegistry:
 
         For SQLite sources, use 'source_name.table_name' qualification.
         """
+        table = validate_identifier(table, "table")
+        if source_name:
+            source_name = validate_identifier(source_name, "source name")
         if source_name and source_name in self._sources:
             src = self._sources[source_name]
             if src.source_type == SourceType.SQLITE:

@@ -6,6 +6,7 @@ from pathlib import Path
 from typing import Any
 
 from data_detective.sources.registry import SourceRegistry
+from data_detective.validation import validate_path
 
 
 def export_data(
@@ -29,6 +30,7 @@ def export_data(
         raise ValueError(f"Unsupported format '{fmt}'. Use 'parquet' or 'csv'.")
 
     resolved = str(Path(output_path).resolve())
+    validate_path(resolved, "output path")
     Path(resolved).parent.mkdir(parents=True, exist_ok=True)
 
     trimmed = sql.strip().rstrip(";")

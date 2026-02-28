@@ -5,6 +5,7 @@ from __future__ import annotations
 from typing import Any
 
 from data_detective.sources.registry import SourceRegistry
+from data_detective.validation import validate_identifier
 
 
 def profile_table(
@@ -21,6 +22,9 @@ def profile_table(
     Returns:
         A profile report with per-column statistics.
     """
+    table = validate_identifier(table, "table")
+    if source:
+        source = validate_identifier(source, "source")
     qualified = f'"{source}"."{table}"' if source else f'"{table}"'
 
     # Row count

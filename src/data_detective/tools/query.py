@@ -5,6 +5,7 @@ from __future__ import annotations
 from typing import Any
 
 from data_detective.sources.registry import SourceRegistry
+from data_detective.validation import validate_identifier
 
 
 def list_tables(registry: SourceRegistry) -> dict[str, Any]:
@@ -56,8 +57,10 @@ def get_sample(registry: SourceRegistry, table: str, n: int = 10, source: str | 
     Returns:
         Sample rows with column names.
     """
+    table = validate_identifier(table, "table")
     if source:
-        qualified = f'"{source}"."{table}"'
+        source = validate_identifier(source, "source")
+        qualified = f'"{source}"."{ table}"'
     else:
         qualified = f'"{table}"'
 

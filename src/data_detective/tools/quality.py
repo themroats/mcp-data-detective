@@ -5,6 +5,7 @@ from __future__ import annotations
 from typing import Any
 
 from data_detective.sources.registry import SourceRegistry
+from data_detective.validation import validate_identifier
 
 
 def detect_quality_issues(
@@ -28,6 +29,9 @@ def detect_quality_issues(
     Returns:
         A list of detected issues with severity and details.
     """
+    table = validate_identifier(table, "table")
+    if source:
+        source = validate_identifier(source, "source")
     qualified = f'"{source}"."{table}"' if source else f'"{table}"'
     schema = registry.get_schema(table, source)
     row_count = registry.execute_raw(f"SELECT COUNT(*) FROM {qualified}").fetchone()[0]
@@ -171,6 +175,12 @@ def detect_anomalies(
     Returns:
         Detected anomalies with z-scores and context.
     """
+    table = validate_identifier(table, "table")
+    column = validate_identifier(column, "column")
+    if source:
+        source = validate_identifier(source, "source")
+    if time_column:
+        time_column = validate_identifier(time_column, "time_column")
     qualified = f'"{source}"."{table}"' if source else f'"{table}"'
     safe_col = f'"{column}"'
 
