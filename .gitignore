@@ -22,3 +22,6 @@ data/*.html
 !data/.gitkeep
 .DS_Store
 Thumbs.db
+
+# Generated charts
+charts/

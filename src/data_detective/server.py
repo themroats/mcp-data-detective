@@ -12,7 +12,7 @@ import logging
 import os
 from typing import Any, Callable
 
-from mcp.server.fastmcp import FastMCP
+from mcp.server.fastmcp import FastMCP, Image
 
 from data_detective import DEFAULT_QUERY_LIMIT
 from data_detective.sources.registry import SourceRegistry
@@ -264,7 +264,6 @@ def export_data(sql: str, output_path: str, format: str = "parquet") -> str:
 
 
 @mcp.tool()
-@_tool_handler
 def create_chart(
     sql: str,
     chart_type: str,
@@ -273,7 +272,7 @@ def create_chart(
     title: str | None = None,
     color: str | None = None,
     output_path: str | None = None,
-) -> str:
+):
     """Run a SQL query and render the results as a chart image.
 
     The chart recipe is held in memory so you can save it later with save_recipe.
@@ -287,9 +286,14 @@ def create_chart(
         color: Optional column name to group/color by.
         output_path: Optional file path for the chart image.
     """
-    return chart_tools.create_chart(
-        registry, sql, chart_type, x, y, title, color, output_path
-    )
+    try:
+        result = chart_tools.create_chart(
+            registry, sql, chart_type, x, y, title, color, output_path
+        )
+        return [Image(path=result["chart_path"]), _json(result)]
+    except Exception as exc:
+        logger.exception("%s failed", "create_chart")
+        return [_error(exc)]
 
 
 @mcp.tool()
@@ -310,11 +314,10 @@ def save_recipe(
 
 
 @mcp.tool()
-@_tool_handler
 def replay_chart(
     recipe_path: str,
     output_path: str | None = None,
-) -> str:
+):
     """Regenerate a chart from a previously saved recipe file.
 
     Re-runs the original SQL against the connected sources and re-renders the chart.
@@ -323,7 +326,12 @@ def replay_chart(
         recipe_path: Path to a .recipe.json file.
         output_path: Optional override path for the chart image.
     """
-    return chart_tools.replay_chart(registry, recipe_path, output_path)
+    try:
+        result = chart_tools.replay_chart(registry, recipe_path, output_path)
+        return [Image(path=result["chart_path"]), _json(result)]
+    except Exception as exc:
+        logger.exception("%s failed", "replay_chart")
+        return [_error(exc)]
 
 
 @mcp.tool()
