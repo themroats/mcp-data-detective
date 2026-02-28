@@ -1,5 +1,5 @@
 """
-MCP Data Server — main server entry point.
+Data Detective — main server entry point.
 
 Registers all tools with the MCP framework and handles the server lifecycle.
 """
@@ -12,15 +12,15 @@ from typing import Any
 
 from mcp.server.fastmcp import FastMCP
 
-from mcp_data_server.sources.registry import SourceRegistry
-from mcp_data_server.tools import connect as connect_tools
-from mcp_data_server.tools import export as export_tools
-from mcp_data_server.tools import profile as profile_tools
-from mcp_data_server.tools import quality as quality_tools
-from mcp_data_server.tools import query as query_tools
+from data_detective.sources.registry import SourceRegistry
+from data_detective.tools import connect as connect_tools
+from data_detective.tools import export as export_tools
+from data_detective.tools import profile as profile_tools
+from data_detective.tools import quality as quality_tools
+from data_detective.tools import query as query_tools
 
 logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger("mcp-data-server")
+logger = logging.getLogger("data-detective")
 
 
 # ---------------------------------------------------------------------------
@@ -42,7 +42,7 @@ def _error(exc: Exception) -> str:
 # ---------------------------------------------------------------------------
 
 mcp = FastMCP(
-    "mcp-data-server",
+    "data-detective",
     instructions=(
         "An MCP server that gives AI assistants the ability to connect to, "
         "query, profile, and monitor data sources — turning any LLM into an "
@@ -291,8 +291,8 @@ def export_data(sql: str, output_path: str, format: str = "parquet") -> str:
 
 
 def main() -> None:
-    """Run the MCP Data Server."""
-    logger.info("Starting MCP Data Server...")
+    """Run Data Detective."""
+    logger.info("Starting Data Detective...")
     mcp.run()
 
 

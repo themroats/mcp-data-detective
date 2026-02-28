@@ -10,7 +10,7 @@ import pyarrow as pa
 import pyarrow.parquet as pq
 import pytest
 
-from mcp_data_server.sources.registry import SourceRegistry
+from data_detective.sources.registry import SourceRegistry
 
 
 @pytest.fixture
@@ -112,7 +112,7 @@ class TestSourceRegistry:
 
 class TestQualityTools:
     def test_detect_quality_issues(self, registry: SourceRegistry, sample_sqlite: Path) -> None:
-        from mcp_data_server.tools.quality import detect_quality_issues
+        from data_detective.tools.quality import detect_quality_issues
 
         registry.connect("db", "sqlite", str(sample_sqlite))
         result = detect_quality_issues(registry, "users", source="db")
@@ -123,7 +123,7 @@ class TestQualityTools:
         assert "high_null_rate" in issue_types  # 25% null emails
 
     def test_detect_anomalies(self, registry: SourceRegistry, sample_parquet: Path) -> None:
-        from mcp_data_server.tools.quality import detect_anomalies
+        from data_detective.tools.quality import detect_anomalies
 
         registry.connect("pq", "parquet", str(sample_parquet))
         # Use a lower z_threshold for this small dataset (5 rows)
@@ -132,7 +132,7 @@ class TestQualityTools:
         assert result["anomaly_count"] >= 1
 
     def test_compare_schemas(self, registry: SourceRegistry, sample_sqlite: Path) -> None:
-        from mcp_data_server.tools.quality import compare_schemas
+        from data_detective.tools.quality import compare_schemas
 
         registry.connect("db", "sqlite", str(sample_sqlite))
         result = compare_schemas(registry, "users", "orders", source_a="db", source_b="db")
@@ -142,7 +142,7 @@ class TestQualityTools:
 
 class TestProfileTools:
     def test_profile_table(self, registry: SourceRegistry, sample_sqlite: Path) -> None:
-        from mcp_data_server.tools.profile import profile_table
+        from data_detective.tools.profile import profile_table
 
         registry.connect("db", "sqlite", str(sample_sqlite))
         result = profile_table(registry, "users", source="db")
@@ -152,7 +152,7 @@ class TestProfileTools:
         assert email_col["null_count"] == 1
 
     def test_summarize(self, registry: SourceRegistry, sample_sqlite: Path) -> None:
-        from mcp_data_server.tools.profile import summarize
+        from data_detective.tools.profile import summarize
 
         registry.connect("db", "sqlite", str(sample_sqlite))
         result = summarize(registry)
@@ -162,7 +162,7 @@ class TestProfileTools:
 
 class TestExportTools:
     def test_export_parquet(self, registry: SourceRegistry, sample_sqlite: Path, tmp_path: Path) -> None:
-        from mcp_data_server.tools.export import export_data
+        from data_detective.tools.export import export_data
 
         registry.connect("db", "sqlite", str(sample_sqlite))
         out = tmp_path / "export.parquet"
@@ -172,7 +172,7 @@ class TestExportTools:
         assert Path(result["path"]).exists()
 
     def test_export_csv(self, registry: SourceRegistry, sample_sqlite: Path, tmp_path: Path) -> None:
-        from mcp_data_server.tools.export import export_data
+        from data_detective.tools.export import export_data
 
         registry.connect("db", "sqlite", str(sample_sqlite))
         out = tmp_path / "export.csv"

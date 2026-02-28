@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from mcp_data_server.sources.registry import SourceRegistry
+from data_detective.sources.registry import SourceRegistry
 
 
 def connect_source(registry: SourceRegistry, name: str, source_type: str, path: str) -> dict[str, Any]:

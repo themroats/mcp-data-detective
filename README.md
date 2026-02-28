@@ -1,4 +1,4 @@
-# mcp-data-server
+# data-detective
 
 An MCP server that gives AI assistants the ability to connect to, query, profile, and monitor data sources — turning any LLM into an interactive data engineering copilot.
 
@@ -31,7 +31,7 @@ Point it at any SQLite database, Parquet file, or CSV and let your AI assistant 
 └──────────────────┬───────────────────────────┘
                    │  MCP Protocol
 ┌──────────────────▼───────────────────────────┐
-│            mcp-data-server                   │
+│            data-detective                    │
 │                                              │
 │  ┌─────────────────────────────────────────┐ │
 │  │             MCP Tools Layer             │ │
@@ -65,8 +65,8 @@ Point it at any SQLite database, Parquet file, or CSV and let your AI assistant 
 
 ```bash
 # Clone the repository
-git clone https://github.com/themroats/mcp-data-server.git
-cd mcp-data-server
+git clone https://github.com/themroats/data-detective.git
+cd data-detective
 
 # Create a virtual environment
 python -m venv .venv
@@ -82,7 +82,7 @@ pip install -e ".[dev]"
 The project includes a synthetic e-commerce data generator with intentional quality issues for demo purposes:
 
 ```bash
-mcp-data-seed
+data-detective-seed
 ```
 
 This creates a `data/` directory with:
@@ -92,9 +92,9 @@ This creates a `data/` directory with:
 
 Options:
 ```bash
-mcp-data-seed --rows 50000          # More data (default: 10,000 orders)
-mcp-data-seed --output ./my-data    # Custom output directory
-mcp-data-seed --format parquet      # Parquet only (or sqlite, both)
+data-detective-seed --rows 50000          # More data (default: 10,000 orders)
+data-detective-seed --output ./my-data    # Custom output directory
+data-detective-seed --format parquet      # Parquet only (or sqlite, both)
 ```
 
 ### Configure with Your AI Client
@@ -104,8 +104,8 @@ Add to your MCP client configuration (e.g. Claude Desktop `claude_desktop_config
 ```json
 {
   "mcpServers": {
-    "data-server": {
-      "command": "mcp-data-server"
+    "data-detective": {
+      "command": "data-detective"
     }
   }
 }
@@ -116,8 +116,8 @@ Or with VS Code / GitHub Copilot, add to `.vscode/mcp.json`:
 ```json
 {
   "servers": {
-    "data-server": {
-      "command": "mcp-data-server"
+    "data-detective": {
+      "command": "data-detective"
     }
   }
 }
@@ -378,8 +378,8 @@ pytest -v
 ## Project Structure
 
 ```
-mcp-data-server/
-├── src/mcp_data_server/
+data-detective/
+├── src/data_detective/
 │   ├── server.py              # MCP server entry point, tool registration
 │   ├── sources/
 │   │   └── registry.py        # DuckDB-backed source management

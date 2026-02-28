@@ -3,9 +3,9 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [project]
-name = "mcp-data-server"
+name = "data-detective"
 version = "0.1.0"
-description = "An MCP server that gives AI assistants the ability to connect to, query, profile, and monitor data sources."
+description = "An MCP server that gives AI assistants the ability to connect to, query, profile, and monitor data sources — turning any LLM into an interactive data detective."
 readme = "README.md"
 license = { text = "MIT" }
 requires-python = ">=3.10"
@@ -26,11 +26,11 @@ dev = [
 ]
 
 [project.scripts]
-mcp-data-server = "mcp_data_server.server:main"
-mcp-data-seed = "mcp_data_server.seed.generator:main"
+data-detective = "data_detective.server:main"
+data-detective-seed = "data_detective.seed.generator:main"
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/mcp_data_server"]
+packages = ["src/data_detective"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

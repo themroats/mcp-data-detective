@@ -5,7 +5,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 
-from mcp_data_server.sources.registry import SourceRegistry
+from data_detective.sources.registry import SourceRegistry
 
 
 def export_data(
