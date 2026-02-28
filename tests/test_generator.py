@@ -9,6 +9,7 @@ import pyarrow.parquet as pq
 import pytest
 
 from data_detective.seed.generator import (
+    GeneratorConfig,
     generate_customers,
     generate_events,
     generate_orders,
@@ -17,6 +18,34 @@ from data_detective.seed.generator import (
     _write_sqlite,
     main,
 )
+
+
+# ---------------------------------------------------------------------------
+# GeneratorConfig
+# ---------------------------------------------------------------------------
+
+
+class TestGeneratorConfig:
+    def test_defaults(self) -> None:
+        cfg = GeneratorConfig()
+        assert cfg.null_email_rate == 0.08
+        assert cfg.negative_price_rate == 0.03
+        assert cfg.duplicate_order_rate == 0.015
+        assert cfg.anomaly_month == 3
+
+    def test_no_defects(self) -> None:
+        cfg = GeneratorConfig.no_defects()
+        assert cfg.null_email_rate == 0.0
+        assert cfg.inactive_rate == 0.0
+        assert cfg.negative_price_rate == 0.0
+        assert cfg.duplicate_order_rate == 0.0
+        assert cfg.future_timestamp_rate == 0.0
+        assert cfg.anomaly_month == 0
+
+    def test_no_defects_with_overrides(self) -> None:
+        cfg = GeneratorConfig.no_defects(event_multiplier=2)
+        assert cfg.null_email_rate == 0.0
+        assert cfg.event_multiplier == 2
 
 
 # ---------------------------------------------------------------------------
@@ -45,6 +74,20 @@ class TestGenerateCustomers:
         null_emails = [c for c in customers if c["email"] is None]
         assert len(null_emails) >= 1
 
+    def test_custom_null_email_rate_zero(self) -> None:
+        """Setting null_email_rate=0 should produce no null emails."""
+        cfg = GeneratorConfig(null_email_rate=0.0)
+        customers = generate_customers(200, cfg)
+        null_emails = [c for c in customers if c["email"] is None]
+        assert len(null_emails) == 0
+
+    def test_custom_null_email_rate_high(self) -> None:
+        """Setting null_email_rate=1.0 should make all emails null."""
+        cfg = GeneratorConfig(null_email_rate=1.0)
+        customers = generate_customers(50, cfg)
+        null_emails = [c for c in customers if c["email"] is None]
+        assert len(null_emails) == 50
+
     def test_valid_regions(self) -> None:
         customers = generate_customers(100)
         valid = {"US-West", "US-East", "US-Central", "EU-West", "EU-East", "APAC"}
@@ -72,6 +115,13 @@ class TestGenerateProducts:
         negatives = [p for p in products if p["price"] < 0]
         assert len(negatives) >= 1
 
+    def test_custom_negative_price_rate_zero(self) -> None:
+        """Setting negative_price_rate=0 should produce no negative prices."""
+        cfg = GeneratorConfig(negative_price_rate=0.0)
+        products = generate_products(200, cfg)
+        negatives = [p for p in products if p["price"] < 0]
+        assert len(negatives) == 0
+
     def test_valid_categories(self) -> None:
         products = generate_products(100)
         valid = {
@@ -91,6 +141,24 @@ class TestGenerateOrders:
         """Order list should be longer than n due to ~1.5% injected duplicates."""
         orders = generate_orders(200, n_customers=50, n_products=20)
         assert len(orders) > 200
+
+    def test_custom_duplicate_rate_zero(self) -> None:
+        """Setting duplicate_order_rate=0 should produce exactly n orders."""
+        cfg = GeneratorConfig(duplicate_order_rate=0.0)
+        orders = generate_orders(100, n_customers=20, n_products=10, cfg=cfg)
+        assert len(orders) == 100
+
+    def test_custom_anomaly_month_disabled(self) -> None:
+        """Setting anomaly_month=0 disables the anomaly."""
+        cfg = GeneratorConfig(anomaly_month=0)
+        orders = generate_orders(2000, n_customers=50, n_products=20, cfg=cfg)
+        march = [o for o in orders if o["order_date"].startswith("2024-03")]
+        non_march = [o for o in orders if not o["order_date"].startswith("2024-03")]
+        if march and non_march:
+            avg_march = sum(o["quantity"] for o in march) / len(march)
+            avg_other = sum(o["quantity"] for o in non_march) / len(non_march)
+            # Without anomaly, March average should be comparable to other months
+            assert avg_march > avg_other * 0.6  # not drastically lower
 
     def test_order_fields(self) -> None:
         orders = generate_orders(10, n_customers=5, n_products=5)
@@ -304,3 +372,59 @@ class TestMain:
         main()
         assert nested.exists()
         assert len(list(nested.glob("*.parquet"))) == 4
+
+    def test_cli_no_defects(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+        """--no-defects should produce clean data with no quality issues."""
+        monkeypatch.setattr(
+            "sys.argv", ["data-detective-seed", "--output", str(tmp_path), "--rows", "200",
+                         "--format", "parquet", "--no-defects"]
+        )
+        main()
+        import pyarrow.parquet as pq
+
+        # Check customers: no null emails
+        customers = pq.read_table(str(tmp_path / "customers.parquet")).to_pylist()
+        assert all(c["email"] is not None for c in customers)
+
+        # Check products: no negative prices
+        products = pq.read_table(str(tmp_path / "products.parquet")).to_pylist()
+        assert all(p["price"] >= 0 for p in products)
+
+        # Check orders: no duplicates (count should be exactly 200)
+        orders = pq.read_table(str(tmp_path / "orders.parquet")).to_pylist()
+        assert len(orders) == 200
+
+    def test_cli_custom_rates(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+        """Custom injection rates should be respected."""
+        monkeypatch.setattr(
+            "sys.argv", ["data-detective-seed", "--output", str(tmp_path), "--rows", "50",
+                         "--format", "parquet", "--null-email-rate", "1.0",
+                         "--negative-price-rate", "0.0", "--duplicate-rate", "0.0"]
+        )
+        main()
+        import pyarrow.parquet as pq
+
+        customers = pq.read_table(str(tmp_path / "customers.parquet")).to_pylist()
+        assert all(c["email"] is None for c in customers)
+
+        products = pq.read_table(str(tmp_path / "products.parquet")).to_pylist()
+        assert all(p["price"] >= 0 for p in products)
+
+    def test_cli_custom_ratios(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+        """Custom entity ratios should control table sizes."""
+        monkeypatch.setattr(
+            "sys.argv", ["data-detective-seed", "--output", str(tmp_path), "--rows", "100",
+                         "--format", "parquet", "--customer-ratio", "0.5",
+                         "--product-ratio", "0.1", "--event-multiplier", "2"]
+        )
+        main()
+        import pyarrow.parquet as pq
+
+        customers = pq.read_table(str(tmp_path / "customers.parquet"))
+        assert customers.num_rows == 100  # max(100, 100*0.5) = 100
+
+        products = pq.read_table(str(tmp_path / "products.parquet"))
+        assert products.num_rows == 50  # max(50, 100*0.1=10) = 50
+
+        events = pq.read_table(str(tmp_path / "events.parquet"))
+        assert events.num_rows == 200  # 100 * 2
