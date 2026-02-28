@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from typing import Any
 
+from data_detective import NUMERIC_TYPE_FRAGMENTS
 from data_detective.sources.registry import SourceRegistry
 from data_detective.validation import validate_identifier
 
@@ -60,10 +61,7 @@ def profile_table(
 
         # Numeric stats
         type_lower = col_type.lower()
-        is_numeric = any(
-            t in type_lower
-            for t in ["int", "float", "double", "decimal", "numeric", "bigint", "smallint", "real"]
-        )
+        is_numeric = any(t in type_lower for t in NUMERIC_TYPE_FRAGMENTS)
 
         if is_numeric:
             agg = registry.execute_raw(

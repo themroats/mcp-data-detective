@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from typing import Any
 
+from data_detective import NUMERIC_TYPE_FRAGMENTS
 from data_detective.sources.registry import SourceRegistry
 from data_detective.validation import validate_identifier
 
@@ -123,9 +124,7 @@ def detect_quality_issues(
             )
 
         # --- Negative values in likely-positive columns ---
-        is_numeric = any(
-            t in col_type for t in ["int", "float", "double", "decimal", "numeric", "real"]
-        )
+        is_numeric = any(t in col_type for t in NUMERIC_TYPE_FRAGMENTS)
         positive_keywords = ["price", "amount", "total", "quantity", "qty", "count", "cost", "revenue", "fee"]
         likely_positive = any(kw in col.lower() for kw in positive_keywords)
 
