@@ -8,3 +8,6 @@ NUMERIC_TYPE_FRAGMENTS = (
     "int", "float", "double", "decimal", "numeric",
     "bigint", "smallint", "tinyint", "hugeint", "ubigint", "real",
 )
+
+# Default maximum rows returned by queries to prevent runaway results.
+DEFAULT_QUERY_LIMIT = 1000

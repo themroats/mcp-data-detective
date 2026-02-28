@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from typing import Any
 
+from data_detective import DEFAULT_QUERY_LIMIT
 from data_detective.sources.registry import SourceRegistry
 from data_detective.validation import validate_identifier
 
@@ -28,7 +29,7 @@ def get_schema(registry: SourceRegistry, table: str, source: str | None = None) 
     return {"table": table, "columns": columns, "column_count": len(columns)}
 
 
-def query(registry: SourceRegistry, sql: str, limit: int = 1000) -> dict[str, Any]:
+def query(registry: SourceRegistry, sql: str, limit: int = DEFAULT_QUERY_LIMIT) -> dict[str, Any]:
     """Execute a SQL query against any connected data source.
 
     Uses DuckDB SQL syntax. Tables from SQLite sources are qualified as "source_name"."table_name".

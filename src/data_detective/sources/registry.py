@@ -15,6 +15,7 @@ from typing import Any
 
 import duckdb
 
+from data_detective import DEFAULT_QUERY_LIMIT
 from data_detective.validation import validate_identifier, validate_path
 
 
@@ -118,7 +119,7 @@ class SourceRegistry:
 
         del self._sources[name]
 
-    def query(self, sql: str, limit: int = 1000) -> list[dict[str, Any]]:
+    def query(self, sql: str, limit: int = DEFAULT_QUERY_LIMIT) -> list[dict[str, Any]]:
         """Execute a SQL query and return results as list of dicts.
 
         A LIMIT clause is appended if not already present to prevent runaway queries.

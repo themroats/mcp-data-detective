@@ -12,6 +12,7 @@ from typing import Any
 
 from mcp.server.fastmcp import FastMCP
 
+from data_detective import DEFAULT_QUERY_LIMIT
 from data_detective.sources.registry import SourceRegistry
 from data_detective.tools import connect as connect_tools
 from data_detective.tools import export as export_tools
@@ -128,7 +129,7 @@ def get_table_schema(table: str, source: str | None = None) -> str:
 
 
 @mcp.tool()
-def run_query(sql: str, limit: int = 1000) -> str:
+def run_query(sql: str, limit: int = DEFAULT_QUERY_LIMIT) -> str:
     """Execute a SQL query against any connected data source.
 
     Uses DuckDB SQL. SQLite tables: "source_name"."table_name". Parquet/CSV: use the alias directly.
