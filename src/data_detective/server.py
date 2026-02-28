@@ -20,6 +20,7 @@ from data_detective.tools import connect as connect_tools
 from data_detective.tools import export as export_tools
 from data_detective.tools import profile as profile_tools
 from data_detective.tools import quality as quality_tools
+from data_detective.tools import chart as chart_tools
 from data_detective.tools import query as query_tools
 
 logging.basicConfig(level=os.environ.get("LOG_LEVEL", "INFO").upper())
@@ -255,6 +256,95 @@ def export_data(sql: str, output_path: str, format: str = "parquet") -> str:
         format: 'parquet' or 'csv' (default 'parquet').
     """
     return export_tools.export_data(registry, sql, output_path, format)
+
+
+# ---------------------------------------------------------------------------
+# Chart tools
+# ---------------------------------------------------------------------------
+
+
+@mcp.tool()
+@_tool_handler
+def create_chart(
+    sql: str,
+    chart_type: str,
+    x: str,
+    y: str,
+    title: str | None = None,
+    color: str | None = None,
+    output_path: str | None = None,
+) -> str:
+    """Run a SQL query and render the results as a chart image.
+
+    The chart recipe is held in memory so you can save it later with save_recipe.
+
+    Args:
+        sql: SQL query that produces the data to chart.
+        chart_type: One of 'bar', 'line', 'scatter', 'histogram'.
+        x: Column name for the x-axis.
+        y: Column name for the y-axis.
+        title: Optional chart title.
+        color: Optional column name to group/color by.
+        output_path: Optional file path for the chart image.
+    """
+    return chart_tools.create_chart(
+        registry, sql, chart_type, x, y, title, color, output_path
+    )
+
+
+@mcp.tool()
+@_tool_handler
+def save_recipe(
+    name: str | None = None,
+    output_dir: str | None = None,
+    index: int = -1,
+) -> str:
+    """Persist the most recent chart recipe to disk as a JSON file.
+
+    Args:
+        name: Optional name for the recipe file.
+        output_dir: Directory to save to (default: ./charts/).
+        index: Recipe index in history (-1 = most recent).
+    """
+    return chart_tools.save_recipe(name, output_dir, index)
+
+
+@mcp.tool()
+@_tool_handler
+def replay_chart(
+    recipe_path: str,
+    output_path: str | None = None,
+) -> str:
+    """Regenerate a chart from a previously saved recipe file.
+
+    Re-runs the original SQL against the connected sources and re-renders the chart.
+
+    Args:
+        recipe_path: Path to a .recipe.json file.
+        output_path: Optional override path for the chart image.
+    """
+    return chart_tools.replay_chart(registry, recipe_path, output_path)
+
+
+@mcp.tool()
+@_tool_handler
+def export_insight(
+    recipe_path: str | None = None,
+    export_format: str = "script",
+    output_path: str | None = None,
+    index: int = -1,
+) -> str:
+    """Export a chart recipe as a standalone Python script, SQL file, or Jupyter notebook.
+
+    Can use either a saved recipe file or whichever recipe is held in memory.
+
+    Args:
+        recipe_path: Path to a .recipe.json. If omitted, uses the in-memory recipe.
+        export_format: One of 'script', 'sql', 'notebook'.
+        output_path: Optional output file path.
+        index: Recipe index in history if using in-memory recipe (-1 = most recent).
+    """
+    return chart_tools.export_insight(recipe_path, export_format, output_path, index)
 
 
 # ---------------------------------------------------------------------------
