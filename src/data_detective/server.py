@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import json
 import logging
+import os
 from typing import Any
 
 from mcp.server.fastmcp import FastMCP
@@ -20,7 +21,7 @@ from data_detective.tools import profile as profile_tools
 from data_detective.tools import quality as quality_tools
 from data_detective.tools import query as query_tools
 
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(level=os.environ.get("LOG_LEVEL", "INFO").upper())
 logger = logging.getLogger("data-detective")
 
 
