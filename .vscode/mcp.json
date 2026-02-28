@@ -2,6 +2,7 @@
   "servers": {
     "data-detective": {
       "command": "${workspaceFolder}/.venv/Scripts/data-detective.exe",
+      "cwd": "${workspaceFolder}",
       "env": {}
     }
   }
